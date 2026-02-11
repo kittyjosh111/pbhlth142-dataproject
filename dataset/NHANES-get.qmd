@@ -1,0 +1,148 @@
+---
+title: "NHANES-get"
+format: html
+editor: visual
+---
+
+### NHANES 2021-23 dataset
+
+First, we get the libraries loaded.
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(nhanesA)
+```
+
+Now, we get various tables from NHANES.
+
+[*https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023*](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?Cycle=2021-2023)
+
+```{r}
+demo = nhanes("DEMO_L") #demographics
+dr1 = nhanes("DR1TOT_L") #diet day 1
+bmx = nhanes("BMX_L") #body measures
+fsq = nhanes("FSQ_L") #food security
+huq = nhanes("HUQ_L") #hospital access / utilization
+hoq = nhanes("HOQ_L") #housing
+```
+
+Now, we join all datasets by SEQN (participant ID)
+
+```{r}
+raw_data = demo |>
+  inner_join(dr1,  by = "SEQN") |>
+  inner_join(bmx,  by = "SEQN") |>
+  inner_join(fsq,  by = "SEQN") |>
+  inner_join(huq,  by = "SEQN") |>
+  inner_join(hoq,  by = "SEQN")
+
+dim(raw_data)
+#names(raw_data)
+```
+
+### Mass Cleaning
+
+Now that we have raw 2021-2023 data, joined by SEQN, we can first rename some variables.
+
+```{r}
+cleaned_data = raw_data |> mutate(
+  id = SEQN,
+  age = RIDAGEYR,
+  sex = factor(RIAGENDR, labels = c("Male", "Female")),
+  race = factor(RIDRETH3),
+  income_to_poverty = INDFMPIR,
+  education = DMDEDUC2,
+  marriage = DMDMARTZ,
+  household_size = DMDHHSIZ,
+  bmi  = BMXBMI, #kg/m**2
+  kcal = DR1TKCAL,
+  fiber_den = DR1TFIBE / (pmax(kcal, 1) / 1000),  # g fiber / 1000 kcal
+  sugar_den = DR1TSUGR / (pmax(kcal, 1) / 1000),  # g sugar / 1000 kcal
+  satfat_den = DR1TSFAT / (pmax(kcal, 1) / 1000), # g sat fat / 1000 kcal
+  sodium_den = DR1TSODI / (pmax(kcal, 1) / 1000),  # mg sodium / 1000 kcal
+  protein_intake = DR1TPROT,
+  carb_intake = DR1TCARB,
+  fiber_intake = DR1TFIBE,
+  sugar_intake = DR1TSUGR,
+  fat_intake = DR1TSFAT,
+  sodium_intake = DR1TSODI,
+  cant_afford_meals = factor(FSD032C),
+  food_security = factor(FSDAD),
+  household_snap = FSD165N, # #of people in household who got snap
+  snap_received = factor(FSQ012),
+  health_condition = factor(HUQ010),
+  health_location = factor(HUQ042),
+  seen_mental_health = factor(HUQ090) #in the past year
+)
+head(cleaned_data, 3)
+```
+
+Get only adults (defined as \>= 20 years old)
+
+```{r}
+cleaned_data |> filter(age >= 20) #only get NHANES-defined adults
+```
+
+Now select only relevant columns.
+
+```{r}
+filtered_data = cleaned_data |>
+  mutate(is_obese = ifelse(is.na(bmi), NA_integer_, as.integer(bmi >= 30))) |>
+  mutate(health_condition = sub(",$", "", health_condition)) |>
+  select(id, age, sex, race, income_to_poverty, education, marriage, household_size, bmi, kcal, fiber_den, sugar_den, satfat_den, sodium_den, protein_intake, carb_intake, fiber_intake, sugar_intake, fat_intake, sodium_intake, cant_afford_meals, food_security, health_condition, health_location, seen_mental_health) #dropped snap stuff because theres too many NAs
+
+#head(filtered_data, 3)
+dim(filtered_data)
+```
+
+```{r}
+filtered_data = filtered_data |> filter(
+    !is.na(bmi)
+  )
+
+dim(filtered_data) #total rows
+dim(filtered_data[!complete.cases(filtered_data), ]) #rows that still have NAs
+head(filtered_data, 1)
+```
+
+Now add descriptions to the dataframe
+
+```{r}
+#names(filtered_data)
+label_names = c(
+  "NHANES partiipant ID (dbl)",
+  "Age (dbl)",
+  "Sex (chr)",
+  "Race (chr)",
+  "Income to Poverty Ratio (db)",
+  "Education Category (chr)",
+  "Marriage Status Category (chr)",
+  "Number of People in Household (dbl)",
+  "BMI Value (dbl)",
+  "Energy Intake in kcal (dbl)",
+  "Fiber Density in g/1000 kcal (dbl)",
+  "Sugar Density in g/1000 kcal (dbl)",
+  "Saturated Fat Density in g/1000 kcal (dbl)",
+  "Sodium Density in g/1000 kcal (dbl)",
+  "Protein Intake in g (dbl)",
+  "Carbohydrate Intake in g (dbl)",
+  "Fiber Intake in g (dbl)",
+  "Sugar Intake in g (dbl)",
+  "Fat Intake in g (dbl)",
+  "Sodium Intake in g (dbl)",
+  "Couldn't Afford Balanced Meals Category (chr)",
+  "Adult Food Security Category (chr)",
+  "General Health Condition (chr)",
+  "Healthcare Location (chr)",
+  "Seen Mental Health Professional in past yr"
+)
+
+data_description = data.frame(variable=names(filtered_data), labels=label_names)
+data_description
+```
+
+```{r}
+write.csv(filtered_data,"nhanes_obesity.csv")
+write.csv(data_description,"nhanes_obesity_description.csv")
+```
