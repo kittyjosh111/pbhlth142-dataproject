@@ -90,7 +90,7 @@ Now select only relevant columns.
 filtered_data = cleaned_data |>
   mutate(is_obese = ifelse(is.na(bmi), NA_integer_, as.integer(bmi >= 30))) |>
   mutate(health_condition = sub(",$", "", health_condition)) |>
-  select(id, age, sex, race, income_to_poverty, education, marriage, household_size, bmi, kcal, fiber_den, sugar_den, satfat_den, sodium_den, protein_intake, carb_intake, fiber_intake, sugar_intake, fat_intake, sodium_intake, cant_afford_meals, food_security, health_condition, health_location, seen_mental_health) #dropped snap stuff because theres too many NAs
+  select(id, age, sex, race, income_to_poverty, education, marriage, household_size, bmi, is_obese, fiber_den, sugar_den, satfat_den, sodium_den, kcal, protein_intake, carb_intake, fiber_intake, sugar_intake, fat_intake, sodium_intake, cant_afford_meals, food_security, health_condition, health_location, seen_mental_health) #dropped snap stuff because theres too many NAs
 
 #head(filtered_data, 3)
 dim(filtered_data)
@@ -120,11 +120,12 @@ label_names = c(
   "Marriage Status Category (chr)",
   "Number of People in Household (dbl)",
   "BMI Value (dbl)",
-  "Energy Intake in kcal (dbl)",
+  "Obese Binary [1 = Obese] (dbl)",
   "Fiber Density in g/1000 kcal (dbl)",
   "Sugar Density in g/1000 kcal (dbl)",
   "Saturated Fat Density in g/1000 kcal (dbl)",
   "Sodium Density in g/1000 kcal (dbl)",
+  "Energy Intake in kcal (dbl)",
   "Protein Intake in g (dbl)",
   "Carbohydrate Intake in g (dbl)",
   "Fiber Intake in g (dbl)",
