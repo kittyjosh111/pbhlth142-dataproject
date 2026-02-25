@@ -1,7 +1,8 @@
 ---
 title: "Plots"
-format: pdf
+format: html
 editor: visual
+embed-resources: true
 ---
 
 # Plots regarding BMI/obesity:
