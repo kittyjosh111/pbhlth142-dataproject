@@ -92,17 +92,15 @@ filtered_data = cleaned_data |>
   mutate(health_condition = sub(",$", "", health_condition)) |>
   select(id, age, sex, race, income_to_poverty, education, marriage, household_size, bmi, is_obese, fiber_den, sugar_den, satfat_den, sodium_den, kcal, protein_intake, carb_intake, fiber_intake, sugar_intake, fat_intake, sodium_intake, cant_afford_meals, food_security, health_condition, health_location, seen_mental_health) #dropped snap stuff because theres too many NAs
 
-#head(filtered_data, 3)
+head(filtered_data, 3)
 dim(filtered_data)
 ```
 
-```{r}
-filtered_data = filtered_data |> filter(
-    !is.na(bmi)
-  )
+And remove any row with NAs
 
+```{r}
+filtered_data = na.omit(filtered_data)
 dim(filtered_data) #total rows
-dim(filtered_data[!complete.cases(filtered_data), ]) #rows that still have NAs
 head(filtered_data, 1)
 ```
 
@@ -144,6 +142,11 @@ data_description
 ```
 
 ```{r}
-write.csv(filtered_data,"nhanes_obesity.csv")
-write.csv(data_description,"nhanes_obesity_description.csv")
+write.csv(filtered_data,"nhanes.csv", row.names = FALSE)
+write.csv(data_description,"nhanes_description.csv", row.names = FALSE)
+```
+
+```{r}
+check_df = read_csv("nhanes.csv")
+dim(check_df) == dim(filtered_data) #FINALLY
 ```
