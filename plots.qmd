@@ -1,0 +1,72 @@
+---
+title: "Plots"
+format: html
+editor: visual
+---
+
+```{r}
+library(readr)
+library(ggplot2)
+data = read_csv("nhanes.csv")
+```
+
+```{r}
+ggplot(data, aes(x=age, y=bmi)) +
+  geom_point(color="darkblue") +
+  labs(title="No clear trends between participant age and BMI", x="Participant Age", y="BMI") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(data, aes(x=race, fill=education)) +
+  geom_bar(position="dodge") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title="There are many more Non-Hispanic White College Grad participants")
+```
+
+```{r}
+ggplot(data, aes(x=health_condition)) +
+  geom_bar(fill="darkblue") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title="There are many more participants in Good or Very Good health")
+```
+
+```{r}
+ggplot(data, aes(x=sex, fill=marriage)) +
+  geom_bar() +
+  theme_minimal() +
+  labs(title="More female participants, and most participants overall are married")
+```
+
+```{r}
+ggplot(data, aes(x=health_condition, y=bmi)) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title="There does not seem to be an apparent trend between health condition and BMI")
+```
+
+```{r}
+#somewhat broken
+#ggplot(filtered_data, aes(x=income_to_poverty, y=health_location)) +
+#  geom_boxplot() +
+#  theme_minimal() +
+#  #theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#  labs(title="Income to Poverty Ratio might be correlated to Healthcare Location")
+```
+
+```{r}
+ggplot(data, aes(x=is_obese, fill=sex)) +
+  geom_bar(position="dodge") +
+  theme_minimal() +
+  labs(title="More people are not obese, and females are more represented in either case", x="Is Obese? (0=no, 1=yes)")
+```
+
+```{r}
+ggplot(data, aes(x=bmi)) +
+  geom_histogram(binwidth=5, fill="darkblue", color="lightblue") +
+  labs(title="Distribution of recorded participant BMIs", x="BMI") +
+  theme_minimal()
+```
