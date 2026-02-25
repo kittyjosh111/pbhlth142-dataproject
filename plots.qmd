@@ -1,8 +1,12 @@
 ---
 title: "Plots"
-format: html
+format: pdf
 editor: visual
 ---
+
+# Plots regarding BMI/obesity:
+
+The National Health and Nutrition Examination Survey (NHANES) is a questionnaire administered by the US Centers for Disease Control (CDC) that is meant to study diet and health in U.S. adults. Specifically, the NHANES results can be categorized into a dataset where each row represents one adult participant, and columns indicating various health markers such as age, obesity, nutrient consumption, etc. As such, the NHANES dataset provides ways to explore how various diet quality and/or socioeconomic factors affect BMI and obesity.
 
 ```{r}
 library(readr)
@@ -16,6 +20,40 @@ ggplot(data, aes(x=age, y=bmi)) +
   labs(title="No clear trends between participant age and BMI", x="Participant Age", y="BMI") +
   theme_minimal()
 ```
+
+```{r}
+ggplot(data, aes(x=bmi)) +
+  geom_histogram(binwidth=5, fill="darkblue", color="white") +
+  labs(title="Distribution of recorded participant BMIs", x="BMI") +
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(data, aes(x=health_condition, y=bmi)) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title="No clear trend between health condition and BMI", x="Health Condition", y="BMI")
+```
+
+```{r}
+library(broom)
+model = lm(bmi ~ kcal, data=data)
+model_int = model[[1]][[1]]
+model_slope = model[[1]][[2]]
+r2 = glance(model)[[1]][[1]]
+
+ggplot(data, aes(x=kcal, y=bmi)) +
+  geom_point() +
+  geom_abline(slope = model_slope, intercept = model_int, color="red") +
+  theme_minimal() +
+  labs(title="There does not seem to be a linear relationship between kcal intake and BMI", subtitle="Line of best fit r^2 = 0.0005", x="Energy Intake (kcal)", y= "BMI")
+```
+
+------------------------------------------------------------------------
+
+## Extra EDA
 
 ```{r}
 ggplot(data, aes(x=race, fill=education)) +
@@ -41,14 +79,6 @@ ggplot(data, aes(x=sex, fill=marriage)) +
 ```
 
 ```{r}
-ggplot(data, aes(x=health_condition, y=bmi)) +
-  geom_boxplot() +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title="There does not seem to be an apparent trend between health condition and BMI")
-```
-
-```{r}
 #somewhat broken
 #ggplot(filtered_data, aes(x=income_to_poverty, y=health_location)) +
 #  geom_boxplot() +
@@ -62,11 +92,4 @@ ggplot(data, aes(x=is_obese, fill=sex)) +
   geom_bar(position="dodge") +
   theme_minimal() +
   labs(title="More people are not obese, and females are more represented in either case", x="Is Obese? (0=no, 1=yes)")
-```
-
-```{r}
-ggplot(data, aes(x=bmi)) +
-  geom_histogram(binwidth=5, fill="darkblue", color="lightblue") +
-  labs(title="Distribution of recorded participant BMIs", x="BMI") +
-  theme_minimal()
 ```
