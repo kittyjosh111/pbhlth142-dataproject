@@ -11,6 +11,7 @@ The National Health and Nutrition Examination Survey (NHANES) is a questionnaire
 
 ```{r}
 library(readr)
+library(dplyr)
 library(ggplot2)
 data = read_csv("nhanes.csv")
 ```
@@ -26,6 +27,14 @@ ggplot(data, aes(x=age, y=bmi)) +
 ggplot(data, aes(x=bmi)) +
   geom_histogram(binwidth=5, fill="darkblue", color="white") +
   labs(title="Distribution of recorded participant BMIs", x="BMI") +
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(data, aes(x=bmi, fill=sex)) +
+  geom_histogram(position="stack", color="white", binwidth=2) +
+  labs(title="Distribution of recorded participant BMIs", x="BMI", subtitle="Unimodal, slightly skewed right") +
   theme_minimal()
 
 ```
@@ -50,6 +59,113 @@ ggplot(data, aes(x=kcal, y=bmi)) +
   geom_abline(slope = model_slope, intercept = model_int, color="red") +
   theme_minimal() +
   labs(title="There does not seem to be a linear relationship between kcal intake and BMI", subtitle="Line of best fit r^2 = 0.0005", x="Energy Intake (kcal)", y= "BMI")
+```
+
+The following graphs will attempt to find a suitable subset to focus visualizations to. They may or may not use code that has not been covered in this class yet.
+
+```{r}
+data |>
+  ggplot(aes(x=kcal, y=bmi)) +
+    geom_point(color="darkblue", size=0.5) +
+    facet_wrap(~ health_condition) +
+    theme_minimal()
+```
+
+```{r}
+data |>
+  ggplot(aes(x=kcal, y=bmi)) +
+    geom_point(color="darkblue", size=0.5) +
+    facet_wrap(~ race) +
+    theme_minimal()
+```
+
+```{r}
+data |>
+  ggplot(aes(x=health_location)) +
+    geom_bar() +
+    facet_wrap(~ is_obese) +
+    theme_minimal() + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+```
+
+```{r}
+data |>
+  ggplot(aes(y=kcal, x=bmi)) +
+    #geom_bar(position="dodge") +
+    geom_point() +
+    facet_wrap(~ health_location) +
+    theme_minimal()
+```
+
+```{r}
+data |>
+  ggplot(aes(x=bmi)) +
+    geom_bar() +
+    facet_wrap(~ education) + #college grad?? stronger peak there
+    theme_minimal()
+```
+
+```{r}
+data |> filter(education == "College graduate or above") |>
+  filter(health_location == "A doctor's office or health center") |>
+  ggplot(aes(x=bmi)) +
+    geom_bar() +
+    facet_wrap(~ food_security)+
+    theme_minimal()
+```
+
+Use this cell to test mutations on the dataset and observe corrs to a variable
+
+```{r}
+corr_search_data = data |>
+  filter(health_condition == "Good" | health_condition == "Very Good" | health_condition == "Excellent") |>
+  filter(income_to_poverty >= 1) |>
+  filter(income_to_poverty <= 3) |>
+  filter(health_location == "A doctor's office or health center") |>
+  filter(is_obese == 1) |>
+  filter(education == "College graduate or above" | education == "Some college or AA degree") |>
+  filter(age <= 33)
+
+lin_outcome = "bmi"
+cor_vars = names(corr_search_data)
+cor_vecs = rep(0, length(cor_vars))
+for (i in c(1:length(cor_vars))) { #so we run cor() on every variable we have
+  if (is.numeric(corr_search_data[[cor_vars[i]]])) {
+    cor_vecs[i] = cor(corr_search_data[[lin_outcome]], corr_search_data[[cor_vars[i]]])
+    #print(paste0("cor(", lin_outcome, ", ", cor_vars[i], "): ", cor_vecs[i]))
+  } else {
+    cor_vecs[i]=0
+  }
+}
+data.frame(x=cor_vars, corr=cor_vecs) |>
+  mutate(r2 = corr ** 2) |>
+  filter(x != "id") |>
+  filter(x != "bmi") |>
+  filter(x != "is_obese") |>
+  arrange(desc(r2)) #well thats not promising
+```
+
+```{r}
+students = data |>
+  filter(health_condition == "Good" | health_condition == "Very Good" | health_condition == "Excellent") |>
+  filter(income_to_poverty >= 1) |>
+  filter(income_to_poverty < 4) |>
+  filter(health_location == "A doctor's office or health center") |>
+  filter(is_obese == 1) |>
+  filter(education == "College graduate or above" | education == "Some college or AA degree") |>
+  filter(age <= 33)
+
+sm = lm(bmi ~ sodium_den, data=students)
+sm_int = sm[[1]][[1]]
+sm_slope = sm[[1]][[2]]
+
+print(paste0("# of participants: ", dim(students)[1], " // R^2: ", round(glance(sm)[1][[1]], 2) ))
+
+ggplot(students, aes(x=sodium_den, y=bmi)) +
+  geom_point(color="darkblue") +
+  labs(title="Obese adults who were under 33 and a student with Good or better health...", subtitle="...who visits a doctor's office or health center with moderate income (1-3x poverty line)", x="Sodium Density in g/1000 kcal", y="BMI") +
+  geom_abline(slope = sm_slope, intercept = sm_int, color="red") +
+  theme_minimal()
 ```
 
 ------------------------------------------------------------------------
