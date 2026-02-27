@@ -1,0 +1,19 @@
+```{r}
+library(broom) #going to use broom for glancing
+model = lm(kcal ~ protein_intake, data=data) #so first run the linear regression
+model_int = model[[1]][[1]] #extracting interecept
+model_slope = model[[1]][[2]] #and extracting slope
+r2 = glance(model)[[1]][[1]] #then extract r squared
+
+data |>
+  ggplot(aes(x=protein_intake, y=kcal)) +
+    geom_point(color="darkblue", size=0.5) + #so its easier to see
+    geom_abline(slope = model_slope, intercept = model_int, color="red") + #using our model stuff
+    theme_minimal() +
+    labs(title="There is a positive correlation between Protein Intake and Energy Intake",
+      subtitle=paste0("y = ", round(model_slope, 2), "x + ", round(model_int, 2), ", r^2 = ", round(r2, 2)),
+      x="Day 1 Protein Intake in g",
+      y="Day 1 Energy Intake in kcal")
+```
+
+The linear regression model has a slope of 17.56 and an intercept of 672.63. The intercept tells us that when a participant's protein intake on Day 1 of the survey was 0 g, their predicted energy intake for that day would be 672.63 kcals. The slope tells us that for every one gram increase in protein intake, our model predicts an increase in the energy intake by 17.56 kcals. The r^2 value derived was 0.59, telling us that around 59% of variability in the Day 1 energy intake could be explained by protein intake on that same day.

@@ -114,6 +114,24 @@ data |> filter(education == "College graduate or above") |>
     theme_minimal()
 ```
 
+```{r}
+library(broom)
+model = lm(kcal ~ protein_intake, data=data)
+model_int = model[[1]][[1]]
+model_slope = model[[1]][[2]]
+r2 = glance(model)[[1]][[1]]
+
+data |>
+  ggplot(aes(x=protein_intake, y=kcal)) +
+    geom_point(color="darkblue", size=0.5) +
+    geom_abline(slope = model_slope, intercept = model_int, color="red") +
+    theme_minimal() +
+    labs(title="There is a positive correlation between Protein Intake and Energy Intake",
+      subtitle=paste0("y = ", round(model_slope, 2), "x + ", round(model_int, 2), ", r^2 = ", round(r2, 2)),
+      x="Day 1 Protein Intake in g",
+      y="Day 1 Energy Intake in kcal")
+```
+
 Use this cell to test mutations on the dataset and observe corrs to a variable
 
 ```{r}
@@ -126,7 +144,9 @@ corr_search_data = data |>
   filter(education == "College graduate or above" | education == "Some college or AA degree") |>
   filter(age <= 33)
 
-lin_outcome = "bmi"
+corr_search_data = data
+
+lin_outcome = "kcal"
 cor_vars = names(corr_search_data)
 cor_vecs = rep(0, length(cor_vars))
 for (i in c(1:length(cor_vars))) { #so we run cor() on every variable we have
@@ -140,8 +160,8 @@ for (i in c(1:length(cor_vars))) { #so we run cor() on every variable we have
 data.frame(x=cor_vars, corr=cor_vecs) |>
   mutate(r2 = corr ** 2) |>
   filter(x != "id") |>
-  filter(x != "bmi") |>
-  filter(x != "is_obese") |>
+  #filter(x != "bmi") |>
+  #filter(x != "is_obese") |>
   arrange(desc(r2)) #well thats not promising
 ```
 
