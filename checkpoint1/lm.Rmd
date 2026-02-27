@@ -1,0 +1,12 @@
+```{r}
+library(broom)
+model = lm(kcal ~ protein_intake, data=data)
+model_int = model[[1]][[1]]
+model_slope = model[[1]][[2]]
+r2 = glance(model)[[1]][[1]]
+
+data |>
+  ggplot(aes(x=protein_intake, y=kcal)) +
+    geom_point(color="darkblue", size=0.5) +
+    geom_abline(slope = model_slope, intercept = model_int, color="red")
+```
