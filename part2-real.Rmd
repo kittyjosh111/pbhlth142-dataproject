@@ -1,0 +1,113 @@
+---
+title: "Part 2"
+output: html_document
+date: "2026-04-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+data = read_csv("nhanes.csv")
+names(data)
+head(data, 2)
+```
+
+# Part 2
+
+### Looking at obesity
+
+Since we are observing obesity from the NHANES dataset, we are looking at a binary variable: whether a patient is obese or not. Thus, we expect a binomial distribution in the form of X \~ Binomial(n, p), where n is the sample size and p is the probability of being obese. As such, n can be determined by taking the number of rows of the dataset, and p can be determined by taking the number of people classified as obese over the total rows.
+
+Additionally, we can calculate the mean via the equation n \* p, and standard deviation with sqrt(n \* p \* (1-p)).
+
+```{r}
+binomial_n = nrow(data)
+binomial_p = sum(data$is_obese) / binomial_n
+binomial_mean = binomial_n * binomial_p
+binomial_std = sqrt(binomial_n * binomial_p * (1-binomial_p))
+binomial_parameters = c(binomial_n, binomial_p, binomial_mean, binomial_std)
+
+binomial_parameters
+```
+
+So the distribution for our obesity data from the NHANES 2021-23 dataset can be represented as Binomial(3787, 0.43).
+
+With a binomial distribution, we would be able to estimate the probability of a specific number of "successes", in this case being obese. To do so, we could take a large number of samples with replacement to generate a distribution of probabilities. First we define the function to do so...
+
+```{r}
+#bootstrap time
+bootstrapper = function(n, dataset) {
+  #N is the number of bootstrap samples to take
+  #DATASET is the dataframe to pass in
+  return_vect = c(rep(0, n))
+  sample_length = nrow(dataset)
+  for (i in c(1:n)) {
+    this_sample = dataset |>
+      sample_n(sample_length, replace=TRUE)
+    return_vect[i] = mean(this_sample$is_obese)
+  }
+  return(return_vect)
+  #returns a vector of length N of probabilities of successes
+}
+```
+
+Then we generate 10,000 samples and store it to a vector.
+
+```{r}
+p_samples = bootstrapper(10000, data) #very slow!!!
+```
+
+Now we can see what it looks like.
+
+```{r}
+ggplot(data.frame(x=p_samples), aes(x=x)) +
+  geom_histogram(aes(y=after_stat(density)), bins=45, fill="darkblue", color="white") +
+  labs(title="Density distribution from 10,000 samples") +
+  theme_minimal()
+```
+
+Now that we have an empirical dataset for the distribution, we can calculate probabilities. For example, we can find the probability that the proportion of obese individuals in a sample exceeds 45%.
+
+```{r}
+#for > 45%:
+numerator = sum(p_samples > 0.45)
+denominator = length(p_samples)
+
+prob_more_45 = numerator / denominator
+prob_more_45
+```
+
+Using ggplot2, we can visualize what this might look like:
+
+```{r}
+ggplot(data.frame(x=p_samples), aes(x=x)) +
+  geom_histogram(aes(y=after_stat(density)), bins=45, fill="darkblue", color="white") +
+  geom_vline(xintercept = 0.45, color="red", linetype="dashed") +
+  annotate("rect", xmin = 0.45, xmax = max(p_samples), ymin = 0, ymax = 50, alpha = 0.1, fill = "red") +
+  labs(title="Density distribution from 10,000 samples", subtitle="Highlighted region shows when P(X>45%)") +
+  theme_minimal()
+```
+
+And additionally, we can compare our bootstrap-calculated probability to that of R's builtin binomial distributions.
+
+```{r}
+prob_more_45_r = pbinom(0.45*binomial_parameters[[1]], size=binomial_parameters[[1]], prob=binomial_parameters[[2]], lower.tail=FALSE)
+print(paste0("Manually calculated probability: ", round(prob_more_45, 5), " || pbinom calculated probability: ", round(prob_more_45_r, 5)))
+```
+
+Additionally, since our sample size is large, the distribution of the proportions approaches normality, as dictated by the Central Limit Theorem. We can confirm this with a QQ Plot.
+
+```{r}
+ggplot(data.frame(x=p_samples), aes(sample=x)) +
+  geom_qq(color="darkgreen", size=0.7) +
+  geom_qq_line(color="red") +
+  labs(title="QQ Plot shows roughly normal distribution of probabilities") +
+  theme_minimal()
+```
+
