@@ -1,0 +1,162 @@
+---
+title: "part2"
+output: html_document
+date: "2026-04-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+data = read_csv("nhanes.csv")
+```
+
+```{r}
+head(data, 3)
+```
+
+# Using part 1's question:
+
+#### Exploration
+
+```{r}
+ggplot(data, aes(x=carb_intake)) +
+  geom_histogram(fill="darkblue", color="white") +
+  labs(title="Distribution of carb intake") +
+  theme_minimal()
+
+ggplot(data, aes(x=kcal)) +
+  geom_histogram(fill="darkblue", color="white") +
+  labs(title="Distribution of kcal") +
+  theme_minimal()
+```
+
+So kcal becomes our target variable. We can use various predictor variables to serve as "exposures" by assigning thresholds.
+
+```{r}
+diet_predictors=select(data, c(1, c(16:21)))
+summary(diet_predictors[-1])
+
+density_predictors=select(data, c(1, c(11:14)))
+summary(density_predictors[-1])
+
+misc_predictors=select(data, c(1, c(2)))
+summary(misc_predictors[-1])
+
+#sdoh_predictors=select(data, c(1, c(16:21)))
+#summary(sdoh_predictors[-1])
+```
+
+The following might be too advanced for our project...
+
+Let's focus only on carbs for now, as per our part 1 question. [Mayo Clinic](https://www.mayoclinic.org/healthy-lifestyle/nutrition-and-healthy-eating/in-depth/carbohydrates/art-20045705) seems to suggest between 45% to 65% of calories be from carbs for a healthy diet. Also, In general, sugar or starch gives you about 4 calories a gram.
+
+```{r}
+target_calories = 2000
+target_carb_cals = c(0.45*target_calories, 0.65*target_calories)
+mayo_g_cal = 1/4 #1 gram per 4 cals
+
+target_carb_gs = target_carb_cals * mayo_g_cal
+
+#now, going to create a new column for our data table with whether the participant had higher than normal carb intake.
+
+more_carbs = data$carb_intake > target_carb_gs[2]
+
+sum(more_carbs) #counts how many are above our limit
+#583, seems enough for data analysis/visualization
+
+data = mutate(data, "more_carbs"=more_carbs)
+
+head(select(data,more_carbs),3)
+```
+
+```{r}
+custom_labels <- c("TRUE" = "High Carb Intake", "FALSE" = "Low Carb Intake")
+ggplot(data, aes(x=kcal)) +
+  geom_histogram(fill="darkblue", color="white") +
+  facet_wrap(vars(more_carbs), labeller = labeller(more_carbs = custom_labels)) + 
+  labs(title="Distribution of kcals faceted by having high carb intake shows unimodal peaks") +
+  theme_bw()
+```
+
+Now let's look for more general correlations, which are possible points of "exposure".
+
+```{r}
+corr_search_data = data
+
+lin_outcome = "kcal"
+cor_vars = names(corr_search_data)
+cor_vecs = rep(0, length(cor_vars))
+for (i in c(1:length(cor_vars))) { #so we run cor() on every variable we have
+  if (is.numeric(corr_search_data[[cor_vars[i]]])) {
+    cor_vecs[i] = cor(corr_search_data[[lin_outcome]], corr_search_data[[cor_vars[i]]])
+  } else {
+    cor_vecs[i]=0
+  }
+}
+data.frame(x=cor_vars, corr=cor_vecs) |>
+  mutate(r2 = corr ** 2) |>
+  filter(x != "id") |>
+  filter(x != lin_outcome) |>
+  arrange(desc(r2)
+```
+
+------------------------------------------------------------------------
+
+#### Filtering Outliers and Testing Normality
+
+We should filter our data to remove outliers (like whatever is beyond 8000), and maybe the tail.
+
+```{r}
+data_parameters = summary(data$kcal)
+data_parameters
+```
+
+```{r}
+data |>
+  filter(kcal >= 6000) #i cant seem to see anything strange in the other factors
+```
+
+```{r}
+iqr = data_parameters[[5]] - data_parameters[[2]]
+lower_bound = data_parameters[[2]] - (1.5 * iqr)
+upper_bound = data_parameters[[5]] + (1.5 * iqr)
+
+filtered_data = data |>
+  filter(kcal > lower_bound) |>
+  filter(kcal < upper_bound)
+
+print(paste(nrow(data), nrow(filtered_data)))
+```
+
+```{r}
+ggplot(filtered_data, aes(x=kcal)) +
+  geom_histogram(bins=60, fill="darkgreen", color="white") +
+  labs(title="Distribution of filtered kcals") +
+  theme_bw()
+
+ggplot(filtered_data, aes(sample = kcal)) +
+  geom_qq(color="darkgreen", size=0.7) +
+  geom_qq_line(color="red") +
+  labs(title="QQ Plot of kcal suggests non-uniform distribution") +
+  theme_minimal()
+```
+
+```{r}
+#lets try with numerical data
+filtered_kcals = filtered_data$kcal
+manual_filt_mean = sum(filtered_kcals) / length(filtered_kcals)
+filt_median = quantile(filtered_kcals, 0.5)
+
+print(paste0("Absolute Difference between Mean and Median: ", round(abs(manual_filt_mean - filt_median), 2)))
+
+```
+
+All this suggests that by itself, kcal distributions without filtering for exposures, even with outliers removed, will not have a normal distribution.
+
+------------------------------------------------------------------------
